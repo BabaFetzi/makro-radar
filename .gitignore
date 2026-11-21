@@ -1,0 +1,3 @@
+__pycache__/
+.env
+daten/signal_log_demo.json

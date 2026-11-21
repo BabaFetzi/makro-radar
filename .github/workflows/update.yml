@@ -1,0 +1,54 @@
+name: Makro-Radar aktualisieren
+
+on:
+  schedule:
+    # Zeiten in UTC: 06:15 (vor Börsenstart Europa) und 21:45 (nach US-Börsenschluss)
+    - cron: "15 6 * * *"
+    - cron: "45 21 * * *"
+  workflow_dispatch:   # manuell starten über den Actions-Tab
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: makro-radar
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Analyse laufen lassen
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: python main.py --news ${{ vars.NEWS_MODUS || 'auto' }}
+
+      - name: Signal-Protokoll speichern (für die Live-Trefferquote)
+        run: |
+          git config user.name "makro-radar-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add daten/signal_log.json
+          git diff --cached --quiet || git commit -m "Signale $(date -u +%F)"
+          git push
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - id: deploy
+        uses: actions/deploy-pages@v4
