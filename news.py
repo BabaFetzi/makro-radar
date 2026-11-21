@@ -69,8 +69,10 @@ REGELN = [
      {**_w(AKTIEN, 1), **_w(KRYPTO, 1)}, "Sinkende Inflation öffnet Spielraum für Zinssenkungen"),
     (r"recession|rezession|slowdown|contraction|layoffs|stellenabbau",
      {**_w(AKTIEN, -1), **_w(ZYKL, -1), "Gold": 1, **_w(CHF, -1), **_w(JPY, -1)}, "Konjunktursorgen: Flucht in sichere Häfen"),
-    (r"tariff|trade war|zölle|zoll|sanction|sanktion",
+    (r"\b(new|higher|raises?|impose[sd]?|hikes?|threatens?)\b.{0,30}\btariffs?\b|\btariffs?\b.{0,30}\b(hike|increase|threat|imposed)|trade war|\bneue zölle\b|\bzollstreit\b",
      {**_w(AKTIEN, -1), **_w(ZYKL, -1), "Gold": 1, **_w(CHF, -1)}, "Handelskonflikt belastet Welthandel"),
+    (r"(sanction|sanktion)\w*.{0,60}\b(oil|crude|öl|russia|russland|iran|venezuela)\b|\b(oil|crude|russia|iran|venezuela)\b.{0,60}(sanction|sanktion)",
+     {"Öl (WTI)": 1, "Gold": 1}, "Sanktionen können das Ölangebot verknappen"),
     (r"(?<!trade )\bwar\b|attack|escalat|conflict|missile|krieg|angriff|tensions?",
      {**_w(AKTIEN, -1), "Gold": 1, "Öl (WTI)": 1, **_w(CHF, -1), **_w(JPY, -1)}, "Geopolitisches Risiko: Gold und Franken gefragt"),
     (r"ceasefire|peace (deal|talks)|truce|waffenstillstand|friedens",
@@ -107,6 +109,7 @@ REGELN = [
 
 
 def analysiere_mit_schluesselwoertern(meldungen: list[dict]) -> dict:
+    """Grobe Auswertung ohne KI. Versteht keinen Kontext (Meinung vs. Ereignis) – daher geringe Konfidenz."""
     ausgewertet = []
     for i, m in enumerate(meldungen):
         wirkung, gruende = {}, []
@@ -117,7 +120,7 @@ def analysiere_mit_schluesselwoertern(meldungen: list[dict]) -> dict:
                 gruende.append(grund)
         wirkung = {k: v for k, v in wirkung.items() if v}
         if wirkung:
-            ausgewertet.append({**m, "nr": i, "wirkung": wirkung, "konfidenz": 0.5, "begruendung": "; ".join(gruende)})
+            ausgewertet.append({**m, "nr": i, "wirkung": wirkung, "konfidenz": 0.35, "begruendung": "; ".join(gruende)})
     return {"modus": "Schlüsselwörter", "lage": None, "meldungen": ausgewertet}
 
 
@@ -186,12 +189,17 @@ def news_scores(analyse: dict) -> dict[str, dict]:
     jetzt = datetime.now(timezone.utc)
     summen = {n: 0.0 for n in ASSET_NAMEN}
     gruende: dict[str, list] = {n: [] for n in ASSET_NAMEN}
+    beitraege: dict[str, list[float]] = {n: [] for n in ASSET_NAMEN}
     for m in analyse["meldungen"]:
         alter_h = max(0.0, (jetzt - datetime.fromisoformat(m["zeit"])).total_seconds() / 3600)
         gewicht = 0.5 ** (alter_h / 24) * m["konfidenz"]
         for name, w in m["wirkung"].items():
-            summen[name] += w * gewicht
+            beitraege[name].append(w * gewicht)
             gruende[name].append((abs(w * gewicht), w, m["titel"]))
+    # Abnehmender Grenznutzen: 20 Meldungen zum selben Thema sind nicht 20-mal so wichtig wie eine
+    for name, liste in beitraege.items():
+        liste.sort(key=abs, reverse=True)
+        summen[name] = sum(b * 0.6 ** k for k, b in enumerate(liste))
     return {n: {"score": math.tanh(summen[n] / 2.5),
                 "anzahl": len(gruende[n]),
                 "top": [{"richtung": w, "titel": t} for _, w, t in sorted(gruende[n], reverse=True)[:3]]}

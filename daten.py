@@ -21,8 +21,11 @@ def lade_kurse(jahre: int = 6) -> pd.DataFrame:
     df = close.rename(columns=umbenennen)[list(tickers)]
     df.index = pd.to_datetime(df.index).tz_localize(None).normalize()
     df = df[~df.index.duplicated(keep="last")].sort_index()
-    # Krypto handelt am Wochenende, Börsen nicht: Lücken mit letztem Kurs füllen (max. 5 Tage)
-    return df.ffill(limit=5)
+    # Krypto handelt am Wochenende, Börsen nicht. Nur die Makro-Indikatoren auffüllen;
+    # Anlagekurse bleiben roh, sonst entstehen künstliche 0%-Tage (z.B. "SMI +0.00%" am Samstag).
+    ind = list(config.INDIKATOREN)
+    df[ind] = df[ind].ffill(limit=5)
+    return df
 
 
 def lade_fred() -> dict[str, dict]:
