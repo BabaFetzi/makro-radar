@@ -70,5 +70,22 @@ class PruefungTest(unittest.TestCase):
         self.assertGreater(live["geprueft"], 0)
 
 
+class AktienTest(unittest.TestCase):
+    def test_rangliste_und_backtest(self):
+        import aktien
+        df = daten.demo_kurse()
+        kurse, fund = daten.demo_aktien(df.index)
+        liste, lage = aktien.rangliste(kurse, fund, df)
+        self.assertEqual(len(liste), len(aktien.alle_titel()))
+        self.assertTrue(all(0 <= e["score"] <= 100 for e in liste))
+        self.assertGreaterEqual(liste[0]["score"], liste[-1]["score"])
+        self.assertIn("cagr_top", aktien.backtest(kurse, df))
+
+    def test_fehlende_kennzahlen_neutral(self):
+        import aktien
+        score, _ = aktien.qualitaet_score({}, ["AAPL", "MSFT"])
+        self.assertTrue((score == 0).all())
+
+
 if __name__ == "__main__":
     unittest.main()

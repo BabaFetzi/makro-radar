@@ -42,7 +42,7 @@ jobs:
         run: |
           git config user.name "makro-radar-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add daten/signal_log.json
+          git add daten/signal_log.json daten/fundamentaldaten.json 2>/dev/null || git add daten/signal_log.json
           git diff --cached --quiet || git commit -m "Signale $(date -u +%F)"
           git push
 

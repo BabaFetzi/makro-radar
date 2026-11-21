@@ -12,6 +12,8 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import aktien
+import aktien_seite
 import daten
 import dashboard
 import news
@@ -55,6 +57,21 @@ def main() -> None:
     (args.out.parent / "daten.json").write_text(json.dumps(
         {"erstellt": erstellt, "umfeld": umfeld, "signale": aktuelle, "fred": fred,
          "news": analyse, "backtest": bt, "live": live}, ensure_ascii=False, default=str), encoding="utf-8")
+
+    print("6/6 Aktien-Empfehlungen …")
+    try:
+        if args.demo:
+            kurse_aktien, fund = daten.demo_aktien(df.index)
+        else:
+            kurse_aktien = aktien.lade_kurse()
+            fund = aktien.lade_fundamentaldaten(BASIS / "daten" / "fundamentaldaten.json")
+        liste, lage = aktien.rangliste(kurse_aktien, fund, df)
+        seite = aktien_seite.erzeuge(liste, lage, aktien.markt_ampel(df, umfeld),
+                                     aktien.backtest(kurse_aktien, df), erstellt, demo=args.demo)
+        (args.out.parent / "aktien.html").write_text(seite, encoding="utf-8")
+        print("     Top 5: " + ", ".join(f"{e['name']} ({e['score']})" for e in liste if e["gruppe"] != "ETFs")[:200])
+    except Exception as e:  # Aktien-Teil darf den Makro-Radar nicht blockieren
+        print(f"     Aktien-Empfehlungen fehlgeschlagen: {e}")
 
     print(f"\nUmfeld: {umfeld['regime']} (VIX {umfeld['vix']})")
     for s in sorted(aktuelle, key=lambda s: -s["score"]):

@@ -168,12 +168,14 @@ table{{width:100%;border-collapse:collapse;font-size:.76rem}}th,td{{padding:6px 
 th:first-child,td:first-child{{text-align:left}}th{{color:#94a3b8;font-weight:500}}
 .box{{background:#111a2e;border-radius:12px;padding:12px;overflow-x:auto}}
 .demo{{background:#7c2d12;color:#fed7aa;border-radius:10px;padding:8px 12px;font-size:.82rem;margin-bottom:10px}}
+.aktien-link{{display:block;margin-top:10px;background:#2563eb;color:#fff;text-align:center;padding:12px;border-radius:12px;font-weight:600;text-decoration:none}}
 footer{{color:#475569;font-size:.72rem;margin-top:28px;text-align:center}}
 </style></head><body><main>
 {demo_hinweis}
 <div class="kopf"><small>Stand {escape(erstellt)} · Kurse vom {umfeld['datum']}</small>
 <h1>Makro-Radar</h1><span class="regime">{umfeld['regime']} · Risiko-Index {umfeld['risiko']:+d}</span></div>
 <div class="lage">{lage}</div>
+<a class="aktien-link" href="aktien.html">Aktien-Empfehlungen ansehen ›</a>
 
 <h2>Makro-Indikatoren</h2><div class="kacheln">{kachel_html}</div>
 

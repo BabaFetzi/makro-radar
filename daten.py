@@ -106,3 +106,23 @@ def demo_news() -> list[dict]:
     ]
     return [{"quelle": q, "titel": t, "link": "", "zeit": (jetzt - pd.Timedelta(hours=i * 3)).isoformat()}
             for i, (q, t) in enumerate(titel)]
+
+
+def demo_aktien(index: pd.DatetimeIndex, seed: int = 11) -> tuple[pd.DataFrame, dict]:
+    """Künstliche Aktienkurse und Kennzahlen für den Demo-Modus."""
+    import aktien
+
+    rng = np.random.default_rng(seed)
+    markt = rng.normal(0.0004, 0.009, len(index))
+    kurse, fund = {}, {}
+    for t in aktien.alle_titel():
+        drift = rng.normal(0.0003, 0.0004)
+        r = rng.uniform(0.6, 1.3) * markt + rng.normal(drift, rng.uniform(0.008, 0.022), len(index))
+        kurse[t["ticker"]] = 100 * np.exp(np.cumsum(r))
+        if t["gruppe"] != "ETFs":
+            fund[t["ticker"]] = {"trailingPE": float(rng.uniform(8, 45)), "forwardPE": float(rng.uniform(8, 40)),
+                                 "priceToBook": float(rng.uniform(1, 12)), "returnOnEquity": float(rng.uniform(-0.05, 0.4)),
+                                 "profitMargins": float(rng.uniform(0.02, 0.35)), "debtToEquity": float(rng.uniform(0, 250)),
+                                 "dividendYield": float(rng.uniform(0, 0.05)), "revenueGrowth": float(rng.uniform(-0.1, 0.3)),
+                                 "earningsGrowth": float(rng.uniform(-0.3, 0.5))}
+    return pd.DataFrame(kurse, index=index), fund
